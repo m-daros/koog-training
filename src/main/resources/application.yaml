@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: koog-training
+
+app:
+  llm:
+#    provider: ollama
+#    model: qwen3:4b
+#    base-url: http://localhost:11434
+
+    provider: groq
+    model: llama-3.3-70b-versatile
+    max-output-tokens: 1536
+    base-url: https://api.groq.com
+    api-key: ${GROQ_API_KEY}
+    rate-limit:
+      enabled: true
+      requests-per-minute: 2
+      requests-per-day: 1000
+      state-file: .koog-training/llm-quota.properties
+    retry:
+      enabled: true
+      max-attempts: 3
+      initial-delay-millis: 1000
+      max-delay-millis: 20000
+      backoff-multiplier: 2.0
+      jitter-factor: 0.2
