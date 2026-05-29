@@ -5,7 +5,7 @@ import lombok.Getter;
 @Getter
 public enum Agents {
 
-	ANALYST 	( "analyst" ),
+	SW_ANALYST ( "sw-analyst" ),
 	QA_ENGINEER ( "qa-engineer" ),;
 
 	private final String name;

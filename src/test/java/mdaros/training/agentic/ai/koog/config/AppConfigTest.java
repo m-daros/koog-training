@@ -48,11 +48,11 @@ class AppConfigTest {
 			"graphStrategy",
 			AIAgentSubgraphBase.class,
 			AIAgentSubgraphBase.class
-		);
+			);
 
 		assertThat ( graphStrategy.getParameters () )
 			.extracting ( parameter -> parameter.getAnnotation ( Qualifier.class ).value () )
-			.containsExactly ( "analyst", "qa-engineer" );
+			.containsExactly ( "sw-analyst", "qa-engineer" );
 	}
 
 //	@Test

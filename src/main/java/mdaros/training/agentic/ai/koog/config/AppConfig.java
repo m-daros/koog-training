@@ -2,7 +2,6 @@ package mdaros.training.agentic.ai.koog.config;
 
 import ai.koog.agents.core.agent.AIAgent;
 import ai.koog.agents.core.agent.entity.*;
-import ai.koog.agents.core.dsl.builder.AIAgentEdgeBuilder;
 import ai.koog.prompt.executor.clients.LLMClient;
 import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig;
 import ai.koog.prompt.executor.clients.google.GoogleLLMClient;
@@ -18,8 +17,6 @@ import ai.koog.prompt.executor.model.PromptExecutor;
 import ai.koog.prompt.llm.LLMCapability;
 import ai.koog.prompt.llm.LLMProvider;
 import ai.koog.prompt.llm.LLModel;
-import mdaros.training.agentic.ai.koog.model.RequirementAnalysis;
-import mdaros.training.agentic.ai.koog.model.TestPlan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -45,8 +42,8 @@ import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleOpe
 @ConditionalOnProperty ( prefix = "app.cli", name = "enabled", havingValue = "true", matchIfMissing = true )
 public class AppConfig {
 
-	private static final String ANALYST_AGENT = "analyst";
-	private static final String QA_ENGINEER_AGENT = "qa-engineer";
+	private static final String SW_ANALYST_AGENT   = "sw-analyst";
+	private static final String QA_ENGINEER_AGENT  = "qa-engineer";
 	private static final String AGENT_PROMPTS_PATH = "agents/";
 
 	private static final List<LLMCapability> DEFAULT_MODEL_CAPABILITIES = List.of (
@@ -300,7 +297,7 @@ public class AppConfig {
 
 //		@Qualifier ( ANALYST_AGENT ) AIAgentSubgraphBase<String, RequirementAnalysis> analystSubGraph,
 //		@Qualifier ( QA_ENGINEER_AGENT ) AIAgentSubgraphBase<RequirementAnalysis, TestPlan> qaEngineerSubGraph ) {
-		@Qualifier ( ANALYST_AGENT ) AIAgentSubgraphBase<String, String> analystSubGraph,
+		@Qualifier ( SW_ANALYST_AGENT ) AIAgentSubgraphBase<String, String> analystSubGraph,
 		@Qualifier ( QA_ENGINEER_AGENT ) AIAgentSubgraphBase<String, String> qaEngineerSubGraph ) {
 
 		var builder = AIAgentGraphStrategy.builder ()
@@ -324,13 +321,13 @@ public class AppConfig {
 
 	@Bean
 	@Lazy
-	@Qualifier ( ANALYST_AGENT )
+	@Qualifier ( SW_ANALYST_AGENT )
 //	public AIAgentSubgraphBase<String, RequirementAnalysis> analystAgent ( PromptExecutor promptExecutor ) {
 	public AIAgentSubgraphBase<String, String> analystAgent ( PromptExecutor promptExecutor ) {
 
-		var systemPrompt = loadAgentPrompt ( "analyst.md" );
+		var systemPrompt = loadAgentPrompt ( "sw-analyst.md" );
 
-		return AIAgentSubgraph.builder ( ANALYST_AGENT )
+		return AIAgentSubgraph.builder ( SW_ANALYST_AGENT )
 			.limitedTools ( Collections.emptyList () )
 			.withInput ( String.class )
 //			.withOutput ( RequirementAnalysis.class )
