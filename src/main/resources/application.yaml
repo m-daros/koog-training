@@ -8,14 +8,20 @@ app:
 #    model: qwen3:4b
 #    base-url: http://localhost:11434
 
+    # Use the exact Groq model id (see https://console.groq.com/docs/models).
+    # llama-3.3-70b-versatile: may emit text-style <function=...> for structured subgraph output.
+    # openai/gpt-oss-120b: often better tool calling; id must include the openai/ prefix.
     provider: groq
-    model: llama-3.3-70b-versatile
-    max-output-tokens: 1536
+    model: openai/gpt-oss-120b
+    max-output-tokens: 768
     base-url: https://api.groq.com
     api-key: ${GROQ_API_KEY}
     rate-limit:
       enabled: true
-      requests-per-minute: 2
+      # The observed Groq on_demand limit for openai/gpt-oss-120b is 8000 TPM.
+      requests-per-minute: 1
+      tokens-per-minute: 8000
+      token-estimate-overhead: 3000
       requests-per-day: 1000
       state-file: .koog-training/llm-quota.properties
     retry:

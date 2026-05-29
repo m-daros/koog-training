@@ -55,28 +55,28 @@ class AppConfigTest {
 			.containsExactly ( "sw-analyst", "qa-engineer" );
 	}
 
-//	@Test
-//	void graphStrategyConnectsAnalystThenQaEngineerThenFinish () {
-//
-//		AppConfig config = new AppConfig ();
-//		AIAgentSubgraphBase<String, RequirementAnalysis> analyst = config.analystAgent ( null );
-//		AIAgentSubgraphBase<RequirementAnalysis, TestPlan> qaEngineer = config.qaEngineerAgent ( null );
-//
-//		var graphStrategy = config.graphStrategy ( analyst, qaEngineer );
-//
-//		assertThat ( graphStrategy.getNodeStart ().getEdges () )
-//			.singleElement ()
-//			.extracting ( edge -> edge.getToNode ().getName () )
-//			.isEqualTo ( "analyst" );
-//
-//		assertThat ( analyst.getEdges () )
-//			.singleElement ()
-//			.extracting ( edge -> edge.getToNode ().getName () )
-//			.isEqualTo ( "qa-engineer" );
-//
-//		assertThat ( qaEngineer.getEdges () )
-//			.singleElement ()
-//			.extracting ( edge -> edge.getToNode ().getName () )
-//			.isEqualTo ( "__finish__" );
-//	}
+	@Test
+	void graphStrategyConnectsAnalystThenQaEngineerThenFinish () {
+
+		AppConfig config = new AppConfig ();
+		AIAgentSubgraphBase<String, RequirementAnalysis> analyst = config.analystAgent ( null );
+		AIAgentSubgraphBase<RequirementAnalysis, TestPlan> qaEngineer = config.qaEngineerAgent ( null );
+
+		var graphStrategy = config.graphStrategy ( analyst, qaEngineer );
+
+		assertThat ( graphStrategy.getNodeStart ().getEdges () )
+			.singleElement ()
+			.extracting ( edge -> edge.getToNode ().getName () )
+			.isEqualTo ( "sw-analyst" );
+
+		assertThat ( analyst.getEdges () )
+			.singleElement ()
+			.extracting ( edge -> edge.getToNode ().getName () )
+			.isEqualTo ( "qa-engineer" );
+
+		assertThat ( qaEngineer.getEdges () )
+			.singleElement ()
+			.extracting ( edge -> edge.getToNode ().getName () )
+			.isEqualTo ( "__finish__" );
+	}
 }

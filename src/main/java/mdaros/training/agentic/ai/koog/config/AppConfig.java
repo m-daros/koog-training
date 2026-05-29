@@ -1,6 +1,7 @@
 package mdaros.training.agentic.ai.koog.config;
 
 import ai.koog.agents.core.agent.AIAgent;
+import ai.koog.agents.core.agent.ToolCalls;
 import ai.koog.agents.core.agent.entity.*;
 import ai.koog.prompt.executor.clients.LLMClient;
 import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig;
@@ -17,6 +18,9 @@ import ai.koog.prompt.executor.model.PromptExecutor;
 import ai.koog.prompt.llm.LLMCapability;
 import ai.koog.prompt.llm.LLMProvider;
 import ai.koog.prompt.llm.LLModel;
+import mdaros.training.agentic.ai.koog.model.RequirementAnalysis;
+import mdaros.training.agentic.ai.koog.model.TestPlan;
+import mdaros.training.agentic.ai.koog.tools.FlatFinalizeTools;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -81,7 +85,9 @@ public class AppConfig {
 				client,
 				llmProperties.getRateLimit ().getRequestsPerMinute (),
 				llmProperties.getRateLimit ().getRequestsPerDay (),
-				llmProperties.getRateLimit ().getStateFile ()
+				llmProperties.getRateLimit ().getStateFile (),
+				llmProperties.getRateLimit ().getTokensPerMinute (),
+				llmProperties.getRateLimit ().getTokenEstimateOverhead ()
 			);
 		}
 
@@ -114,7 +120,9 @@ public class AppConfig {
 				client,
 				llmProperties.getRateLimit ().getRequestsPerMinute (),
 				llmProperties.getRateLimit ().getRequestsPerDay (),
-				llmProperties.getRateLimit ().getStateFile ()
+				llmProperties.getRateLimit ().getStateFile (),
+				llmProperties.getRateLimit ().getTokensPerMinute (),
+				llmProperties.getRateLimit ().getTokenEstimateOverhead ()
 			);
 		}
 
@@ -210,13 +218,13 @@ public class AppConfig {
 
 	@Bean
 	@Lazy
-//	public AIAgent<String, TestPlan> graphAgent ( AIAgentGraphStrategy<String, TestPlan> graphStrategy, PromptExecutor promptExecutor, LLModel llmModel ) {
-	public AIAgent<String, String> graphAgent ( AIAgentGraphStrategy<String, String> graphStrategy, PromptExecutor promptExecutor, LLModel llmModel ) {
+	public AIAgent<String, TestPlan> graphAgent ( AIAgentGraphStrategy<String, TestPlan> graphStrategy, PromptExecutor promptExecutor, LLModel llmModel ) {
 
 		return AIAgent.builder ()
 			.promptExecutor ( promptExecutor )
 			.llmModel ( llmModel )
 			.graphStrategy ( graphStrategy )
+			.temperature ( 0.0 )
 			.build ();
 	}
 
@@ -292,84 +300,69 @@ public class AppConfig {
 
 	@Bean
 	@Lazy
-//	public AIAgentGraphStrategy<String, TestPlan> graphStrategy (
-	public AIAgentGraphStrategy<String, String> graphStrategy (
+	public AIAgentGraphStrategy<String, TestPlan> graphStrategy (
 
-//		@Qualifier ( ANALYST_AGENT ) AIAgentSubgraphBase<String, RequirementAnalysis> analystSubGraph,
-//		@Qualifier ( QA_ENGINEER_AGENT ) AIAgentSubgraphBase<RequirementAnalysis, TestPlan> qaEngineerSubGraph ) {
-		@Qualifier ( SW_ANALYST_AGENT ) AIAgentSubgraphBase<String, String> analystSubGraph,
-		@Qualifier ( QA_ENGINEER_AGENT ) AIAgentSubgraphBase<String, String> qaEngineerSubGraph ) {
+		@Qualifier ( SW_ANALYST_AGENT ) AIAgentSubgraphBase<String, RequirementAnalysis> analystSubGraph,
+		@Qualifier ( QA_ENGINEER_AGENT ) AIAgentSubgraphBase<RequirementAnalysis, TestPlan> qaEngineerSubGraph ) {
 
 		var builder = AIAgentGraphStrategy.builder ()
 			.withInput ( String.class )
-//			.withOutput ( TestPlan.class );
-			.withOutput ( String.class );
+			.withOutput ( TestPlan.class );
 
-//		var edge1 = AIAgentEdge.builder ()
-//			.from ( builder.nodeStart )
-//			.to ( analystSubGraph )
-//				.transformed ( x -> x )
-//			.build ();
+		var startToAnalyst = AIAgentEdge.builder ()
+			.from ( builder.nodeStart )
+			.to ( analystSubGraph )
+			.transformed ( requirement -> requirement )
+			.build ();
 
+		var analystToQaEngineer = AIAgentEdge.builder ()
+			.from ( analystSubGraph )
+			.to ( qaEngineerSubGraph )
+			.transformed ( requirementAnalysis -> requirementAnalysis )
+			.build ();
 
-		builder.edge ( builder.nodeStart, analystSubGraph );
-		builder.edge ( analystSubGraph, qaEngineerSubGraph );
-		builder.edge ( qaEngineerSubGraph, builder.nodeFinish );
+		var qaEngineerToFinish = AIAgentEdge.builder ()
+			.from ( qaEngineerSubGraph )
+			.to ( builder.nodeFinish )
+			.transformed ( testPlan -> testPlan )
+			.build ();
 
-		return	builder.build ();
+		builder.edge ( startToAnalyst );
+		builder.edge ( analystToQaEngineer );
+		builder.edge ( qaEngineerToFinish );
+
+		return builder.build ();
 	}
 
 	@Bean
 	@Lazy
 	@Qualifier ( SW_ANALYST_AGENT )
-//	public AIAgentSubgraphBase<String, RequirementAnalysis> analystAgent ( PromptExecutor promptExecutor ) {
-	public AIAgentSubgraphBase<String, String> analystAgent ( PromptExecutor promptExecutor ) {
+	public AIAgentSubgraphBase<String, RequirementAnalysis> analystAgent ( PromptExecutor promptExecutor ) {
 
 		var systemPrompt = loadAgentPrompt ( "sw-analyst.md" );
 
 		return AIAgentSubgraph.builder ( SW_ANALYST_AGENT )
 			.limitedTools ( Collections.emptyList () )
 			.withInput ( String.class )
-//			.withOutput ( RequirementAnalysis.class )
-			.withOutput ( String.class )
+			.withFinishTool ( FlatFinalizeTools.requirementAnalysis () )
 			.withTask ( requirement ->  systemPrompt + "\n. Analyze the following requirement: " + requirement  )
-//			.define ( subgraph -> {
-//
-//				// Define nodes and edges for this subgraph
-//			} )
-//			.promptExecutor ( promptExecutor )
-//			.llmModel ( GoogleModels.Gemini2_5FlashLite )		// TODO Rendere configurabile
-//			.temperature ( 0.7 ) 								// TODO Rendere configurabile
-//			.maxIterations ( 5 )								// TODO Rendere configurabile
-//			.usingLLM ( GoogleModels.Gemini2_5FlashLite )		// TODO Rendere configurabile
-//			.systemPrompt ( systemPrompt )
+			.runMode ( ToolCalls.SINGLE_RUN_SEQUENTIAL )
 			.build ();
 	}
 
 	@Bean
 	@Lazy
 	@Qualifier ( QA_ENGINEER_AGENT )
-//	public AIAgentSubgraphBase<RequirementAnalysis, TestPlan> qaEngineerAgent ( PromptExecutor promptExecutor ) {
-	public AIAgentSubgraphBase<String, String> qaEngineerAgent ( PromptExecutor promptExecutor ) {
+	public AIAgentSubgraphBase<RequirementAnalysis, TestPlan> qaEngineerAgent ( PromptExecutor promptExecutor ) {
 
 		var systemPrompt = loadAgentPrompt ( "qa-engineer.md" );
 
 		return AIAgentSubgraph.builder ( QA_ENGINEER_AGENT )
 			.limitedTools ( Collections.emptyList () )
-//			.withInput ( RequirementAnalysis.class )
-			.withInput ( String.class )
-//			.withOutput ( TestPlan.class )
-			.withOutput ( String.class )
+			.withInput ( RequirementAnalysis.class )
+			.withFinishTool ( FlatFinalizeTools.testPlan () )
 			.withTask ( requirementAnalysis ->  systemPrompt + "\n. Prepare a test plan for the given requirement analysis: " + requirementAnalysis  )
-//			.define ( subgraph -> {
-//				// Define nodes and edges for this subgraph
-//			} )
-//			.promptExecutor ( promptExecutor )
-//			.llmModel ( GoogleModels.Gemini2_5FlashLite )		// TODO Rendere configurabile
-//			.temperature ( 0.7 ) 								// TODO Rendere configurabile
-//			.maxIterations ( 5 )								// TODO Rendere configurabile
-//			.usingLLM ( GoogleModels.Gemini2_5FlashLite )		// TODO Rendere configurabile
-//			.systemPrompt ( systemPrompt )
+			.runMode ( ToolCalls.SINGLE_RUN_SEQUENTIAL )
 			.build ();
 	}
 }

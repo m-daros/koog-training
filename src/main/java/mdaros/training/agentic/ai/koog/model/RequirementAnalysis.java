@@ -3,15 +3,15 @@ package mdaros.training.agentic.ai.koog.model;
 import ai.koog.agents.core.tools.annotations.LLMDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@LLMDescription ( "Structured requirement analysis object. Return this as a JSON object with rawRequirement and analysis fields, never as a plain string." )
+@LLMDescription ( "Concise structured requirement analysis result." )
 public record RequirementAnalysis (
 
 	@JsonProperty ( "rawRequirement" )
-	@LLMDescription ( "The original user requirement that is being analyzed." )
+	@LLMDescription ( "Original user requirement without apostrophes." )
 	String rawRequirement,
 
 	@JsonProperty ( "analysis" )
-	@LLMDescription ( "The complete requirement analysis as plain text, including business goal, requirements, user stories, acceptance criteria, assumptions, dependencies, constraints, and open questions. Do not use apostrophes or single quotes in this field." )
+	@LLMDescription ( "Concise requirement analysis, maximum 3500 characters. Include goal, requirements, user stories, acceptance criteria, assumptions, dependencies, constraints, and open questions. Do not use apostrophes or single quotes." )
 	String analysis
 ) {
 }

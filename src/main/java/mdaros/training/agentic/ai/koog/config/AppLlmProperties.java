@@ -36,6 +36,8 @@ public class AppLlmProperties {
 
 		private boolean enabled;
 		private int requestsPerMinute = 9;
+		private int tokensPerMinute;
+		private int tokenEstimateOverhead = 512;
 		private int requestsPerDay = 18;
 		private String stateFile = ".koog-training/llm-quota.properties";
 	}
