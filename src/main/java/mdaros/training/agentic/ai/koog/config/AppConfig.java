@@ -3,6 +3,8 @@ package mdaros.training.agentic.ai.koog.config;
 import ai.koog.agents.core.agent.AIAgent;
 import ai.koog.agents.core.agent.ToolCalls;
 import ai.koog.agents.core.agent.entity.*;
+import ai.koog.agents.core.tools.ToolRegistry;
+import ai.koog.agents.core.tools.ToolRegistryBuilder;
 import ai.koog.prompt.executor.clients.LLMClient;
 import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig;
 import ai.koog.prompt.executor.clients.google.GoogleLLMClient;
@@ -20,6 +22,7 @@ import ai.koog.prompt.llm.LLMProvider;
 import ai.koog.prompt.llm.LLModel;
 import mdaros.training.agentic.ai.koog.model.RequirementAnalysis;
 import mdaros.training.agentic.ai.koog.model.TestPlan;
+import mdaros.training.agentic.ai.koog.tools.AskUserToolSet;
 import mdaros.training.agentic.ai.koog.tools.FlatFinalizeTools;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -223,8 +226,16 @@ public class AppConfig {
 		return AIAgent.builder ()
 			.promptExecutor ( promptExecutor )
 			.llmModel ( llmModel )
+			.toolRegistry ( toolRegistry () )
 			.graphStrategy ( graphStrategy )
 			.temperature ( 0.0 )
+			.build ();
+	}
+
+	private static ToolRegistry toolRegistry () {
+
+		return new ToolRegistryBuilder ()
+			.tools ( new AskUserToolSet () )
 			.build ();
 	}
 
@@ -342,7 +353,7 @@ public class AppConfig {
 		var systemPrompt = loadAgentPrompt ( "sw-analyst.md" );
 
 		return AIAgentSubgraph.builder ( SW_ANALYST_AGENT )
-			.limitedTools ( Collections.emptyList () )
+			.limitedTools ( new AskUserToolSet () )
 			.withInput ( String.class )
 			.withFinishTool ( FlatFinalizeTools.requirementAnalysis () )
 			.withTask ( requirement ->  systemPrompt + "\n. Analyze the following requirement: " + requirement  )
