@@ -23,7 +23,7 @@ import ai.koog.prompt.llm.LLModel;
 import mdaros.training.agentic.ai.koog.model.RequirementAnalysis;
 import mdaros.training.agentic.ai.koog.model.TestPlan;
 import mdaros.training.agentic.ai.koog.tools.AskUserToolSet;
-import mdaros.training.agentic.ai.koog.tools.FlatFinalizeTools;
+import mdaros.training.agentic.ai.koog.support.FlatFinalizeTools;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -43,14 +43,14 @@ import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleMis
 import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleOllamaAIExecutor;
 import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleOpenAIExecutor;
 import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleOpenRouterExecutor;
+import static mdaros.training.agentic.ai.koog.Constants.QA_ENGINEER_AGENT;
+import static mdaros.training.agentic.ai.koog.Constants.SW_ANALYST_AGENT;
 
 @Configuration
 @EnableConfigurationProperties ( AppLlmProperties.class )
 @ConditionalOnProperty ( prefix = "app.cli", name = "enabled", havingValue = "true", matchIfMissing = true )
 public class AppConfig {
 
-	private static final String SW_ANALYST_AGENT   = "sw-analyst";
-	private static final String QA_ENGINEER_AGENT  = "qa-engineer";
 	private static final String AGENT_PROMPTS_PATH = "agents/";
 
 	private static final List<LLMCapability> DEFAULT_MODEL_CAPABILITIES = List.of (
@@ -234,6 +234,7 @@ public class AppConfig {
 
 	private static ToolRegistry toolRegistry () {
 
+		// Tools must be executable from the agent registry; subgraphs decide visibility with limitedTools.
 		return new ToolRegistryBuilder ()
 			.tools ( new AskUserToolSet () )
 			.build ();

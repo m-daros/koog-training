@@ -1,4 +1,4 @@
-package mdaros.training.agentic.ai.koog.tools;
+package mdaros.training.agentic.ai.koog.support;
 
 import ai.koog.agents.core.tools.Tool;
 import ai.koog.agents.core.tools.ToolDescriptor;
