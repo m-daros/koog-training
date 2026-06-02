@@ -4,6 +4,9 @@ spring:
 
 app:
   llm:
+#    Supported providers: ollama, openai, google, anthropic, openrouter, mistral, groq.
+#    base-url is optional for provider defaults.
+#    Default API key env vars: OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY, MISTRAL_API_KEY, GROQ_API_KEY.
 #    provider: ollama
 #    model: qwen3:4b
 #    base-url: http://localhost:11434

@@ -5,6 +5,7 @@ import ai.koog.prompt.executor.clients.LLMClient;
 import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient;
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient;
 import ai.koog.prompt.executor.ollama.client.OllamaClient;
+import ai.koog.prompt.llm.LLMProvider;
 import mdaros.training.agentic.ai.koog.model.RequirementAnalysis;
 import mdaros.training.agentic.ai.koog.model.TestPlan;
 import org.junit.jupiter.api.Test;
@@ -90,7 +91,7 @@ class AppConfigTest {
 	}
 
 	@ParameterizedTest
-	@EnumSource ( value = AppLlmProperties.Provider.class, names = { "OLLAMA", "OPENAI", "ANTHROPIC", "GROQ" } )
+	@EnumSource ( value = AppLlmProperties.Provider.class )
 	void llmClientSupportsConfiguredProvider ( AppLlmProperties.Provider provider ) throws Exception {
 
 		LLMClient client = AppConfig.llmClient ( llmProperties ( provider ) );
@@ -98,25 +99,13 @@ class AppConfigTest {
 		try {
 
 			assertInstanceOf ( expectedClientType ( provider ), client );
+			assertThat ( client.llmProvider () )
+				.isEqualTo ( expectedLlmProvider ( provider ) );
 		}
 		finally {
 
 			client.close ();
 		}
-	}
-
-	@ParameterizedTest
-	@EnumSource ( value = AppLlmProperties.Provider.class, names = { "GOOGLE", "OPENROUTER", "MISTRAL" } )
-	void llmClientFailsWhenProviderIsNotSupportedByCurrentKoogClasspath ( AppLlmProperties.Provider provider ) {
-
-		AppLlmProperties llmProperties = llmProperties ( provider );
-
-		IllegalStateException exception = assertThrows (
-			IllegalStateException.class,
-			() -> AppConfig.llmClient ( llmProperties )
-		);
-
-		assertEquals ( "Unsupported or missing LLM provider: " + provider, exception.getMessage () );
 	}
 
 	@Test
@@ -137,7 +126,6 @@ class AppConfigTest {
 		AppLlmProperties llmProperties = new AppLlmProperties ();
 		llmProperties.setProvider ( provider );
 		llmProperties.setApiKey ( "test-api-key" );
-		llmProperties.setBaseUrl ( "https://api.groq.com" );
 
 		return llmProperties;
 	}
@@ -147,9 +135,22 @@ class AppConfigTest {
 		return switch ( provider ) {
 
 			case OLLAMA -> OllamaClient.class;
-			case OPENAI, GROQ -> OpenAILLMClient.class;
+			case OPENAI, GOOGLE, OPENROUTER, MISTRAL, GROQ -> OpenAILLMClient.class;
 			case ANTHROPIC -> AnthropicLLMClient.class;
-			default -> throw new IllegalArgumentException ( "Unsupported test provider: " + provider );
+		};
+	}
+
+	private static LLMProvider expectedLlmProvider ( AppLlmProperties.Provider provider ) {
+
+		return switch ( provider ) {
+
+			case OLLAMA -> LLMProvider.Ollama;
+			case OPENAI -> LLMProvider.OpenAI;
+			case GOOGLE -> LLMProvider.Google;
+			case ANTHROPIC -> LLMProvider.Anthropic;
+			case OPENROUTER -> LLMProvider.OpenRouter;
+			case MISTRAL -> LLMProvider.MistralAI;
+			case GROQ -> LLMProvider.OpenAI;
 		};
 	}
 }

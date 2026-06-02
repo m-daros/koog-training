@@ -13,7 +13,7 @@ public class AppLlmProperties {
 	private String model = "qwen3:4b";
 	private Long contextLength;
 	private Long maxOutputTokens;
-	private String baseUrl = "http://localhost:11434";
+	private String baseUrl;
 	private String apiKey;
 	private String apiKeyEnv;
 	private Retry retry = new Retry ();
