@@ -16,14 +16,6 @@ app:
     max-output-tokens: 768
     base-url: https://api.groq.com
     api-key: ${GROQ_API_KEY}
-    rate-limit:
-      enabled: true
-      # The observed Groq on_demand limit for openai/gpt-oss-120b is 8000 TPM.
-      requests-per-minute: 1
-      tokens-per-minute: 8000
-      token-estimate-overhead: 3000
-      requests-per-day: 1000
-      state-file: .koog-training/llm-quota.properties
     retry:
       enabled: true
       max-attempts: 3

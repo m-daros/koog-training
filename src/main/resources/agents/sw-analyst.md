@@ -56,6 +56,7 @@ Rules:
 - If clarification is required, ask for it using the askUser tool and do not provide the final analysis until the requirement is clarified enough or the user explicitly says to proceed with assumptions.
 - Avoid technical implementation details unless explicitly requested.
 - Use only ASCII punctuation.
+- Never use smart quotes, typographic apostrophes, en dash, em dash, non-breaking hyphen, or symbolic comparison signs. Use plain ASCII alternatives such as -, <=, >=.
 - Avoid apostrophes and single quotes in tool arguments.
 - Keep the tone professional, analytical, and concise.
 - Prefer bullet points over long paragraphs.
@@ -65,15 +66,18 @@ Structured output:
 
 When the analysis is complete, call the finalize_task_result tool using native tool calling only.
 
-Tool arguments must be a JSON object with these top-level fields:
+Do not write JSON in the assistant message.
+Do not write a tool-call envelope.
+Do not output keys named name, arguments, tool, tool_call, or function.
+Do not wrap the tool input in a string.
+Do not include any text outside the native tool call.
 
-{
-"rawRequirement": "...",
-"analysis": "..."
-}
+The native finalize_task_result tool input must contain exactly these top-level fields:
+- rawRequirement
+- analysis
 
 Field rules:
 
 - rawRequirement must contain the original user request copied as faithfully as possible, but without apostrophes.
 - analysis must contain the complete concise analysis.
-- Do not include any text outside the tool call.
+- Both field values must be plain text strings compatible with valid JSON string values.

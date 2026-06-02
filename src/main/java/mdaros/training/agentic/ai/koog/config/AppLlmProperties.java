@@ -16,7 +16,6 @@ public class AppLlmProperties {
 	private String baseUrl = "http://localhost:11434";
 	private String apiKey;
 	private String apiKeyEnv;
-	private RateLimit rateLimit = new RateLimit ();
 	private Retry retry = new Retry ();
 
 	public enum Provider {
@@ -28,18 +27,6 @@ public class AppLlmProperties {
 		OPENROUTER,
 		MISTRAL,
 		GROQ
-	}
-
-	@Setter
-	@Getter
-	public static class RateLimit {
-
-		private boolean enabled;
-		private int requestsPerMinute = 9;
-		private int tokensPerMinute;
-		private int tokenEstimateOverhead = 512;
-		private int requestsPerDay = 18;
-		private String stateFile = ".koog-training/llm-quota.properties";
 	}
 
 	@Setter

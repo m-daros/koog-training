@@ -1,22 +1,23 @@
 package mdaros.training.agentic.ai.koog.config;
 
 import ai.koog.agents.core.agent.AIAgent;
-import ai.koog.agents.core.agent.ToolCalls;
 import ai.koog.agents.core.agent.entity.*;
 import ai.koog.agents.core.tools.ToolRegistry;
 import ai.koog.agents.core.tools.ToolRegistryBuilder;
+import ai.koog.http.client.HttpClientFactoryResolver;
+import ai.koog.http.client.KoogHttpClient;
 import ai.koog.prompt.executor.clients.LLMClient;
 import ai.koog.prompt.executor.clients.ConnectionTimeoutConfig;
-import ai.koog.prompt.executor.clients.google.GoogleLLMClient;
-import ai.koog.prompt.executor.clients.google.GoogleModels;
+import ai.koog.prompt.executor.clients.anthropic.AnthropicClientSettings;
+import ai.koog.prompt.executor.clients.anthropic.AnthropicLLMClient;
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings;
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient;
 import ai.koog.prompt.executor.clients.retry.RetryConfig;
 import ai.koog.prompt.executor.clients.retry.RetryConfigBuilder;
-import ai.koog.prompt.executor.clients.retry.RetryablePattern;
 import ai.koog.prompt.executor.clients.retry.RetryingLLMClient;
-import ai.koog.prompt.executor.llms.SingleLLMPromptExecutor;
 import ai.koog.prompt.executor.model.PromptExecutor;
+import ai.koog.prompt.executor.model.PromptExecutorBuilder;
+import ai.koog.prompt.executor.ollama.client.OllamaClient;
 import ai.koog.prompt.llm.LLMCapability;
 import ai.koog.prompt.llm.LLMProvider;
 import ai.koog.prompt.llm.LLModel;
@@ -38,11 +39,6 @@ import java.util.Collections;
 import java.util.List;
 import java.time.Duration;
 
-import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleAnthropicExecutor;
-import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleMistralAIExecutor;
-import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleOllamaAIExecutor;
-import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleOpenAIExecutor;
-import static ai.koog.prompt.executor.llms.all.SimplePromptExecutorsKt.simpleOpenRouterExecutor;
 import static mdaros.training.agentic.ai.koog.Constants.QA_ENGINEER_AGENT;
 import static mdaros.training.agentic.ai.koog.Constants.SW_ANALYST_AGENT;
 
@@ -66,45 +62,38 @@ public class AppConfig {
 	@Lazy
 	public PromptExecutor promptExecutor ( AppLlmProperties llmProperties ) {
 
-		return switch ( llmProperties.getProvider () ) {
+		return new PromptExecutorBuilder ()
+			.addClient ( retryingClient ( llmClient ( llmProperties ), llmProperties.getRetry () ) )
+			.build ();
+	}
 
-			case OLLAMA -> simpleOllamaAIExecutor ( requiredValue ( llmProperties.getBaseUrl (), "app.llm.base-url" ) );
-			case OPENAI -> simpleOpenAIExecutor ( apiKey ( llmProperties, "OPENAI_API_KEY" ) );
-			case GOOGLE -> googlePromptExecutor ( llmProperties );
-			case ANTHROPIC -> simpleAnthropicExecutor ( apiKey ( llmProperties, "ANTHROPIC_API_KEY" ) );
-			case OPENROUTER -> simpleOpenRouterExecutor ( apiKey ( llmProperties, "OPENROUTER_API_KEY" ) );
-			case MISTRAL -> simpleMistralAIExecutor ( apiKey ( llmProperties, "MISTRAL_API_KEY" ) );
-			case GROQ -> groqPromptExecutor ( llmProperties );
+	static LLMClient llmClient ( AppLlmProperties llmProperties ) {
+
+		AppLlmProperties.Provider provider = llmProperties.getProvider ();
+
+		if ( provider == null ) {
+
+			throw unsupportedLlmProvider ( null );
+		}
+
+		return switch ( provider ) {
+
+			case OLLAMA -> new OllamaClient ( httpClientFactory (), requiredValue ( llmProperties.getBaseUrl (), "app.llm.base-url" ) );
+			case OPENAI -> new OpenAILLMClient ( apiKey ( llmProperties, "OPENAI_API_KEY" ), new OpenAIClientSettings (), httpClientFactory () );
+			case ANTHROPIC -> new AnthropicLLMClient ( apiKey ( llmProperties, "ANTHROPIC_API_KEY" ), new AnthropicClientSettings (), httpClientFactory () );
+			case GROQ -> groqClient ( llmProperties );
+			default -> throw unsupportedLlmProvider ( provider );
 		};
 	}
 
-	private static PromptExecutor googlePromptExecutor ( AppLlmProperties llmProperties ) {
+	private static IllegalStateException unsupportedLlmProvider ( AppLlmProperties.Provider provider ) {
 
-		LLMClient client = new GoogleLLMClient ( apiKey ( llmProperties, "GOOGLE_API_KEY" ) );
-
-		if ( llmProperties.getRateLimit ().isEnabled () ) {
-
-			client = new RateLimitedLLMClient (
-				client,
-				llmProperties.getRateLimit ().getRequestsPerMinute (),
-				llmProperties.getRateLimit ().getRequestsPerDay (),
-				llmProperties.getRateLimit ().getStateFile (),
-				llmProperties.getRateLimit ().getTokensPerMinute (),
-				llmProperties.getRateLimit ().getTokenEstimateOverhead ()
-			);
-		}
-
-		if ( llmProperties.getRetry ().isEnabled () ) {
-
-			client = new RetryingLLMClient ( client, retryConfig ( llmProperties.getRetry () ) );
-		}
-
-		return new SingleLLMPromptExecutor ( client );
+		return new IllegalStateException ( "Unsupported or missing LLM provider: " + provider );
 	}
 
-	private static PromptExecutor groqPromptExecutor ( AppLlmProperties llmProperties ) {
+	private static LLMClient groqClient ( AppLlmProperties llmProperties ) {
 
-		LLMClient client = new OpenAILLMClient (
+		return new OpenAILLMClient (
 			apiKey ( llmProperties, "GROQ_API_KEY" ),
 			new OpenAIClientSettings (
 				requiredValue ( llmProperties.getBaseUrl (), "app.llm.base-url" ),
@@ -114,27 +103,24 @@ public class AppConfig {
 				"openai/v1/embeddings",
 				"openai/v1/moderations",
 				"openai/v1/models"
-			)
+			),
+			httpClientFactory ()
 		);
+	}
 
-		if ( llmProperties.getRateLimit ().isEnabled () ) {
+	private static KoogHttpClient.Factory httpClientFactory () {
 
-			client = new RateLimitedLLMClient (
-				client,
-				llmProperties.getRateLimit ().getRequestsPerMinute (),
-				llmProperties.getRateLimit ().getRequestsPerDay (),
-				llmProperties.getRateLimit ().getStateFile (),
-				llmProperties.getRateLimit ().getTokensPerMinute (),
-				llmProperties.getRateLimit ().getTokenEstimateOverhead ()
-			);
+		return HttpClientFactoryResolver.INSTANCE.resolve ();
+	}
+
+	private static LLMClient retryingClient ( LLMClient client, AppLlmProperties.Retry retry ) {
+
+		if ( ! retry.isEnabled () ) {
+
+			return client;
 		}
 
-		if ( llmProperties.getRetry ().isEnabled () ) {
-
-			client = new RetryingLLMClient ( client, retryConfig ( llmProperties.getRetry () ) );
-		}
-
-		return new SingleLLMPromptExecutor ( client );
+		return new RetryingLLMClient ( client, retryConfig ( retry ) );
 	}
 
 	private static RetryConfig retryConfig ( AppLlmProperties.Retry retry ) {
@@ -145,74 +131,19 @@ public class AppConfig {
 			.maxDelay ( Duration.ofMillis ( retry.getMaxDelayMillis () ) )
 			.backoffMultiplier ( retry.getBackoffMultiplier () )
 			.jitterFactor ( retry.getJitterFactor () )
-			.retryablePatterns ( List.of ( new RetryablePattern.Custom ( AppConfig::isRetryableProviderError ) ) )
 			.build ();
-	}
-
-	private static boolean isRetryableProviderError ( String message ) {
-
-		String lowerCaseMessage = message.toLowerCase ();
-
-		if (
-			lowerCaseMessage.contains ( "generaterequestsperday" )
-				|| lowerCaseMessage.contains ( "perday" )
-				|| lowerCaseMessage.contains ( "requests per day" )
-		) {
-
-			return false;
-		}
-
-		return lowerCaseMessage.contains ( "429" )
-			|| lowerCaseMessage.contains ( "500" )
-			|| lowerCaseMessage.contains ( "502" )
-			|| lowerCaseMessage.contains ( "503" )
-			|| lowerCaseMessage.contains ( "504" )
-			|| lowerCaseMessage.contains ( "529" )
-			|| lowerCaseMessage.contains ( "rate limit" )
-			|| lowerCaseMessage.contains ( "too many requests" )
-			|| lowerCaseMessage.contains ( "overloaded" )
-			|| lowerCaseMessage.contains ( "request timeout" )
-			|| lowerCaseMessage.contains ( "connection timeout" )
-			|| lowerCaseMessage.contains ( "temporarily unavailable" )
-			|| lowerCaseMessage.contains ( "service unavailable" );
 	}
 
 	@Bean
 	@Lazy
 	public LLModel llmModel ( AppLlmProperties llmProperties ) {
 
-		return knownModel ( llmProperties );
-	}
-
-	private static LLModel knownModel ( AppLlmProperties llmProperties ) {
-
 		String model = requiredValue ( llmProperties.getModel (), "app.llm.model" );
-
-		if ( llmProperties.getProvider () == AppLlmProperties.Provider.GOOGLE ) {
-
-			return switch ( model ) {
-				case "gemini-2.0-flash" -> GoogleModels.Gemini2_0Flash;
-				case "gemini-2.0-flash-001" -> GoogleModels.Gemini2_0Flash001;
-				case "gemini-2.0-flash-lite" -> GoogleModels.Gemini2_0FlashLite;
-				case "gemini-2.0-flash-lite-001" -> GoogleModels.Gemini2_0FlashLite001;
-				case "gemini-2.5-pro" -> GoogleModels.Gemini2_5Pro;
-				case "gemini-2.5-flash" -> GoogleModels.Gemini2_5Flash;
-				case "gemini-2.5-flash-lite" -> GoogleModels.Gemini2_5FlashLite;
-				case "gemini-3-flash-preview" -> GoogleModels.Gemini3_Flash_Preview;
-				case "gemini-3-pro-preview" -> GoogleModels.Gemini3_Pro_Preview;
-				default -> customModel ( llmProperties );
-			};
-		}
-
-		return customModel ( llmProperties );
-	}
-
-	private static LLModel customModel ( AppLlmProperties llmProperties ) {
 
 		return new LLModel (
 
 			provider ( llmProperties.getProvider () ),
-			llmProperties.getModel (),
+			model,
 			DEFAULT_MODEL_CAPABILITIES,
 			llmProperties.getContextLength (),
 			llmProperties.getMaxOutputTokens ()
@@ -358,7 +289,7 @@ public class AppConfig {
 			.withInput ( String.class )
 			.withFinishTool ( FlatFinalizeTools.requirementAnalysis () )
 			.withTask ( requirement ->  systemPrompt + "\n. Analyze the following requirement: " + requirement  )
-			.runMode ( ToolCalls.SINGLE_RUN_SEQUENTIAL )
+			.parallelTools ( false )
 			.build ();
 	}
 
@@ -374,7 +305,7 @@ public class AppConfig {
 			.withInput ( RequirementAnalysis.class )
 			.withFinishTool ( FlatFinalizeTools.testPlan () )
 			.withTask ( requirementAnalysis ->  systemPrompt + "\n. Prepare a test plan for the given requirement analysis: " + requirementAnalysis  )
-			.runMode ( ToolCalls.SINGLE_RUN_SEQUENTIAL )
+			.parallelTools ( false )
 			.build ();
 	}
 }

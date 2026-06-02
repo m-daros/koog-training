@@ -88,10 +88,16 @@ Rules:
 - State missing information as assumptions or open questions.
 - Do not invent unavailable requirements.
 - Use only ASCII punctuation.
+- Never use smart quotes, typographic apostrophes, en dash, em dash, non-breaking hyphen, or symbolic comparison signs. Use plain ASCII alternatives such as -, <=, >=.
 - Avoid apostrophes and single quotes in all tool arguments.
 
 Structured output:
 - When done, call the `finalize_task_result` tool with native tool calling only.
-- Tool arguments must be a JSON object with top-level `analysis` and `testPlan`.
+- Do not write JSON in the assistant message.
+- Do not write a tool-call envelope.
+- Do not output keys named name, arguments, tool, tool_call, or function.
+- Do not wrap the tool input in a string.
+- Do not include any text outside the native tool call.
+- The native finalize_task_result tool input must contain exactly these top-level fields: analysis and testPlan.
 - `analysis` must be a short summary of the received requirement analysis, maximum 800 characters.
 - `testPlan` must contain the Markdown test plan, maximum 4500 characters.

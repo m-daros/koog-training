@@ -11,7 +11,7 @@ public record TestPlan (
 	String analysis,
 
 	@JsonProperty ( "testPlan" )
-	@LLMDescription ( "Compact Markdown test plan, maximum 4500 characters. Do not use apostrophes or single quotes." )
+	@LLMDescription ( "Compact Markdown test plan, maximum 4500 characters. Do not use apostrophes or single quotes. Use ASCII punctuation only." )
 	String testPlan
 ) {
 }

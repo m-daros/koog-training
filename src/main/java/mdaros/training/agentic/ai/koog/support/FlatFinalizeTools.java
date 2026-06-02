@@ -26,6 +26,8 @@ public final class FlatFinalizeTools {
 
 	public static final String TOOL_NAME = "finalize_task_result";
 	private static final Logger LOGGER = LoggerFactory.getLogger ( FlatFinalizeTools.class );
+	private static final String TOOL_CALLING_RULES = "Use native tool calling with direct top-level fields only. "
+		+ "Do not include name, arguments, tool, tool_call, function, or any JSON wrapper.";
 
 	private FlatFinalizeTools () {
 	}
@@ -36,7 +38,9 @@ public final class FlatFinalizeTools {
 		ToolDescriptor descriptor = SchemaGeneratorKt.getToolDescriptor (
 			type,
 			TOOL_NAME,
-			"Return the concise requirement analysis with rawRequirement and analysis fields.",
+			"Finalize the concise requirement analysis. "
+				+ TOOL_CALLING_RULES
+				+ " Required fields: rawRequirement, analysis.",
 			SchemaGeneratorKt.getDefaultJsonSchemaConfig ()
 		);
 
@@ -87,7 +91,9 @@ public final class FlatFinalizeTools {
 		ToolDescriptor descriptor = SchemaGeneratorKt.getToolDescriptor (
 			type,
 			TOOL_NAME,
-			"Return the concise test plan with analysis and testPlan fields.",
+			"Finalize the concise test plan. "
+				+ TOOL_CALLING_RULES
+				+ " Required fields: analysis, testPlan.",
 			SchemaGeneratorKt.getDefaultJsonSchemaConfig ()
 		);
 
