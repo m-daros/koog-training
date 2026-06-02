@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.lang.reflect.Method;
 
+import static mdaros.training.agentic.ai.koog.utils.LlmClientUtils.llmClient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -94,7 +95,7 @@ class AppConfigTest {
 	@EnumSource ( value = AppLlmProperties.Provider.class )
 	void llmClientSupportsConfiguredProvider ( AppLlmProperties.Provider provider ) throws Exception {
 
-		LLMClient client = AppConfig.llmClient ( llmProperties ( provider ) );
+		LLMClient client = llmClient ( llmProperties ( provider ) );
 
 		try {
 
@@ -115,7 +116,7 @@ class AppConfigTest {
 
 		IllegalStateException exception = assertThrows (
 			IllegalStateException.class,
-			() -> AppConfig.llmClient ( llmProperties )
+			() -> llmClient ( llmProperties )
 		);
 
 		assertEquals ( "Unsupported or missing LLM provider: null", exception.getMessage () );
