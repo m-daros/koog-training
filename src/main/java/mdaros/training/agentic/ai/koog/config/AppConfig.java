@@ -1,9 +1,12 @@
 package mdaros.training.agentic.ai.koog.config;
 
+import ai.koog.agents.chatMemory.feature.ChatHistoryProvider;
+import ai.koog.agents.chatMemory.feature.ChatMemory;
 import ai.koog.agents.core.agent.AIAgent;
 import ai.koog.agents.core.agent.entity.*;
 import ai.koog.agents.core.tools.ToolRegistry;
 import ai.koog.agents.core.tools.ToolRegistryBuilder;
+import ai.koog.agents.features.chathistory.jdbc.PostgresJdbcChatHistoryProvider;
 import ai.koog.http.client.KoogHttpClient;
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings;
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient;
@@ -12,6 +15,8 @@ import ai.koog.prompt.executor.model.PromptExecutorBuilder;
 import ai.koog.prompt.llm.LLMCapability;
 import ai.koog.prompt.llm.LLMProvider;
 import ai.koog.prompt.llm.LLModel;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import mdaros.training.agentic.ai.koog.model.RequirementAnalysis;
 import mdaros.training.agentic.ai.koog.model.TestPlan;
 import mdaros.training.agentic.ai.koog.tools.AskUserToolSet;
@@ -23,7 +28,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
+import javax.sql.DataSource;
 import java.io.IOException;
+
+import kotlin.Unit;
+import kotlinx.coroutines.BuildersKt;
+import kotlinx.coroutines.Dispatchers;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -53,6 +63,50 @@ public class AppConfig {
 
 	@Bean
 	@Lazy
+	protected DataSource dataSource ( AppLlmProperties llmProperties ) {
+
+		HikariConfig config = new HikariConfig ();
+
+		config.setJdbcUrl ( llmProperties.getDataSourceConfig ().getUrl () );
+		config.setUsername ( llmProperties.getDataSourceConfig ().getUsername () );
+		config.setPassword ( llmProperties.getDataSourceConfig ().getPassword () );
+		config.setMaximumPoolSize ( llmProperties.getDataSourceConfig ().getMaximumPoolSize () );
+		config.setMinimumIdle ( llmProperties.getDataSourceConfig ().getMinimumIdle () );
+		config.setIdleTimeout ( llmProperties.getDataSourceConfig ().getIdleTimeout () );
+		config.setConnectionTimeout ( llmProperties.getDataSourceConfig ().getConnectionTimeout () );
+		config.setMaxLifetime ( llmProperties.getDataSourceConfig ().getMaxLifetime () );
+		config.setPoolName ( "koog-chat-history-pool" );
+
+		return new HikariDataSource ( config );
+	}
+
+	@Bean
+	@Lazy
+	protected ChatHistoryProvider chatHistoryProvider ( DataSource dataSource ) {
+
+		long ttlSeconds = 7L * 24L * 60L * 60L;
+
+		PostgresJdbcChatHistoryProvider provider = new PostgresJdbcChatHistoryProvider ( dataSource, "chat_history", ttlSeconds );
+
+		try {
+
+			BuildersKt.runBlocking ( Dispatchers.getIO (), ( scope, continuation ) -> {
+
+				provider.migrate ( continuation );
+				return Unit.INSTANCE;
+			} );
+		}
+		catch ( InterruptedException exception ) {
+
+			Thread.currentThread ().interrupt ();
+			throw new IllegalStateException ( "Interrupted while initializing chat history schema", exception );
+		}
+
+		return provider;
+	}
+
+	@Bean
+	@Lazy
 	public PromptExecutor promptExecutor ( AppLlmProperties llmProperties ) {
 
 		return new PromptExecutorBuilder ()
@@ -78,7 +132,7 @@ public class AppConfig {
 
 	@Bean
 	@Lazy
-	public AIAgent<String, TestPlan> graphAgent ( AIAgentGraphStrategy<String, TestPlan> graphStrategy, PromptExecutor promptExecutor, LLModel llmModel, ToolRegistry toolregistry ) {
+	public AIAgent<String, TestPlan> graphAgent ( AIAgentGraphStrategy<String, TestPlan> graphStrategy, PromptExecutor promptExecutor, ChatHistoryProvider chatHistoryProvider, LLModel llmModel, ToolRegistry toolregistry ) {
 
 		return AIAgent.builder ()
 			.promptExecutor ( promptExecutor )
@@ -86,6 +140,11 @@ public class AppConfig {
 			.toolRegistry ( toolregistry )
 			.graphStrategy ( graphStrategy )
 			.temperature ( 0.0 ) // TODO Rendere configurabile
+			.install ( ChatMemory.Feature, config -> {
+
+				config.chatHistoryProvider ( chatHistoryProvider );
+				config.windowSize ( 50 );
+			} )
 			.build ();
 	}
 
@@ -159,6 +218,8 @@ public class AppConfig {
 		return AIAgentSubgraph.builder ( SW_ANALYST_AGENT )
 			.limitedTools ( new AskUserToolSet () )
 			.withInput ( String.class )
+//			.withOutput ( RequirementAnalysis.class ).define ( subGraph -> /* TODO */  "null" )
+//			.withOutput ( RequirementAnalysis.class )
 			.withFinishTool ( FlatFinalizeTools.requirementAnalysis () )
 			.withTask ( requirement ->  systemPrompt + "\n. Analyze the following requirement: " + requirement  )
 			.parallelTools ( false )
@@ -175,7 +236,9 @@ public class AppConfig {
 		return AIAgentSubgraph.builder ( QA_ENGINEER_AGENT )
 			.limitedTools ( Collections.emptyList () )
 			.withInput ( RequirementAnalysis.class )
-			.withFinishTool ( FlatFinalizeTools.testPlan () )
+//			.withOutput ( TestPlan.class ).define ( subGraph -> /* TODO */  "null" )
+//			.withOutput ( TestPlan.class )
+			.withFinishTool ( FlatFinalizeTools.testPlan () ) // TODO Rimuovere se si riesce in favore di withOutput ()
 			.withTask ( requirementAnalysis ->  systemPrompt + "\n. Prepare a test plan for the given requirement analysis: " + requirementAnalysis  )
 			.parallelTools ( false )
 			.build ();

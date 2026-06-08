@@ -17,6 +17,7 @@ public class AppLlmProperties {
 	private String apiKey;
 	private String apiKeyEnv;
 	private Retry retry = new Retry ();
+	private DataSourceConfig dataSourceConfig = new DataSourceConfig ();
 
 	public enum Provider {
 
@@ -39,5 +40,20 @@ public class AppLlmProperties {
 		private long maxDelayMillis = 20_000L;
 		private double backoffMultiplier = 2.0;
 		private double jitterFactor = 0.2;
+	}
+
+	@Setter
+	@Getter
+	public static class DataSourceConfig {
+
+		private String url;
+		private String username;
+		private String password;
+		private String driverClassName;
+		private int    maximumPoolSize   = 10;
+		private int    minimumIdle       = 2;
+		private long   idleTimeout       = 30_000L;
+		private long   connectionTimeout = 30_000L;
+		private long   maxLifetime       = 1_800_000L;
 	}
 }

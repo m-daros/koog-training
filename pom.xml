@@ -15,6 +15,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<kotlin.version>2.3.10</kotlin.version>
+		<koog.version>1.0.0</koog.version>
 		<kotlin-coroutines.version>1.10.2</kotlin-coroutines.version>
 		<kotlin-serialization.version>1.10.0</kotlin-serialization.version>
 	</properties>
@@ -28,7 +29,31 @@
 		<dependency>
 			<groupId>ai.koog</groupId>
 			<artifactId>koog-agents-jvm</artifactId>
-			<version>1.0.0</version>
+			<version>${koog.version}</version>
+		</dependency>
+
+<!--		<dependency>-->
+<!--			<groupId>ai.koog</groupId>-->
+<!--			<artifactId>agents-features-memory-jvm</artifactId>-->
+<!--			<version>${koog.version}</version>-->
+<!--		</dependency>-->
+
+		<dependency>
+			<groupId>ai.koog</groupId>
+			<artifactId>agents-features-chat-history-jdbc</artifactId>
+			<version>${koog.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>ai.koog</groupId>
+			<artifactId>koog-agents-additions-jvm</artifactId>
+			<version>1.0.0-beta</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.zaxxer</groupId>
+			<artifactId>HikariCP</artifactId>
+			<version>6.3.0</version>
 		</dependency>
 
 		<dependency>
@@ -42,6 +67,13 @@
 			<artifactId>lombok</artifactId>
 			<version>1.18.42</version>
 			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.7.7</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<!-- Test Dependencies -->

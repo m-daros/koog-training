@@ -93,6 +93,8 @@ Rules:
 
 Structured output:
 - When done, call the `finalize_task_result` tool with native tool calling only.
+- Do not output chain-of-thought, planning, reasoning, or preamble text.
+- Your entire response must be only the native finalize_task_result tool call.
 - Do not write JSON in the assistant message.
 - Do not write a tool-call envelope.
 - Do not output keys named name, arguments, tool, tool_call, or function.

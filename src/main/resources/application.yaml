@@ -16,9 +16,11 @@ app:
     # openai/gpt-oss-120b: often better tool calling; id must include the openai/ prefix.
     provider: groq
     model: openai/gpt-oss-120b
-    max-output-tokens: 768
+    # QA test-plan finalize calls need room for tool JSON (up to ~5k chars) plus model overhead.
+    max-output-tokens: 4096
     base-url: https://api.groq.com
     api-key: ${GROQ_API_KEY}
+
     retry:
       enabled: true
       max-attempts: 3
@@ -26,3 +28,15 @@ app:
       max-delay-millis: 20000
       backoff-multiplier: 2.0
       jitter-factor: 0.2
+
+    datasource-config:
+      username: koog-training-user
+      # Default matches the local koog-postgres Helm release; override via KOOG_TRAINING_DB_PASSWORD.
+      password: ${KOOG_TRAINING_DB_PASSWORD:koog-training-password}
+      url: jdbc:postgresql://localhost:5432/koog
+      driver-class-name: org.postgresql.Driver
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      connection-timeout: 30000
+      max-lifetime: 1800000
