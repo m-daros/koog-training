@@ -7,6 +7,9 @@ import ai.koog.agents.core.agent.entity.*;
 import ai.koog.agents.core.tools.ToolRegistry;
 import ai.koog.agents.core.tools.ToolRegistryBuilder;
 import ai.koog.agents.features.chathistory.jdbc.PostgresJdbcChatHistoryProvider;
+import ai.koog.agents.features.persistence.jdbc.PostgresJdbcPersistenceStorageProvider;
+import ai.koog.agents.snapshot.feature.Persistence;
+import ai.koog.agents.snapshot.providers.PersistenceStorageProvider;
 import ai.koog.http.client.KoogHttpClient;
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings;
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient;
@@ -107,6 +110,19 @@ public class AppConfig {
 
 	@Bean
 	@Lazy
+	protected PersistenceStorageProvider persistenceStorage ( DataSource dataSource ) {
+
+		long ttlSeconds = 7L * 24L * 60L * 60L;
+
+		PostgresJdbcPersistenceStorageProvider provider = new PostgresJdbcPersistenceStorageProvider ( dataSource, "agent_checkpoints", ttlSeconds );
+
+		provider.migrateBlocking ();
+
+		return provider;
+	}
+
+	@Bean
+	@Lazy
 	public PromptExecutor promptExecutor ( AppLlmProperties llmProperties ) {
 
 		return new PromptExecutorBuilder ()
@@ -132,7 +148,7 @@ public class AppConfig {
 
 	@Bean
 	@Lazy
-	public AIAgent<String, TestPlan> graphAgent ( AIAgentGraphStrategy<String, TestPlan> graphStrategy, PromptExecutor promptExecutor, ChatHistoryProvider chatHistoryProvider, LLModel llmModel, ToolRegistry toolregistry ) {
+	public AIAgent<String, TestPlan> graphAgent ( AIAgentGraphStrategy<String, TestPlan> graphStrategy, PromptExecutor promptExecutor, ChatHistoryProvider chatHistoryProvider, PersistenceStorageProvider persistenceStorage, LLModel llmModel, ToolRegistry toolregistry ) {
 
 		return AIAgent.builder ()
 			.promptExecutor ( promptExecutor )
@@ -144,6 +160,10 @@ public class AppConfig {
 
 				config.chatHistoryProvider ( chatHistoryProvider );
 				config.windowSize ( 50 );
+			} )
+			.install ( Persistence.Feature, config -> {
+				config.setStorage ( persistenceStorage );
+				config.setEnableAutomaticPersistence ( true );
 			} )
 			.build ();
 	}

@@ -32,11 +32,11 @@
 			<version>${koog.version}</version>
 		</dependency>
 
-<!--		<dependency>-->
-<!--			<groupId>ai.koog</groupId>-->
-<!--			<artifactId>agents-features-memory-jvm</artifactId>-->
-<!--			<version>${koog.version}</version>-->
-<!--		</dependency>-->
+		<dependency>
+			<groupId>ai.koog</groupId>
+			<artifactId>agents-features-persistence-jdbc</artifactId>
+			<version>${koog.version}</version>
+		</dependency>
 
 		<dependency>
 			<groupId>ai.koog</groupId>
